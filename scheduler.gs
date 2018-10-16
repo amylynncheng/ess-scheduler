@@ -1,9 +1,15 @@
 var spreadsheetId = '1Gsycm1tMUYzACA8FtnWR3Q09yLQ8_B8AMtUvbxeCKyA';
+var scheduleSheet = 'New Schedule';
 var tutors = [];
 var daysOfTheWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+var columns = ['B','C','D','E','F','G'];
+var allShifts = ['9-10','10-11','11-12','12-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8','8-9'];
+var nonActiveShifts = ['B2:B25','B42:B49','G22:G49'];
 
 var SURVEY_NAME = 'Form Responses';
+var MAX_TUTORS = 4;
 var DAYS_WITH_INDV_AND_GROUP = 4;
+var STARTING_CELL = 2;
 var FRIDAY_HOURS_CELL = 4;
 var SUNDAY_HOURS_CELL = 9;
 
@@ -22,10 +28,19 @@ function onOpen() {
  */
 function showSidebar() {
   var html = HtmlService.createHtmlOutputFromFile('sidebar')
-      .setTitle('Scheduling Sidebar')
-      .setWidth(300);
-  SpreadsheetApp.getUi()
-      .showSidebar(html);
+      .setTitle('Scheduling Sidebar');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+function main() {
+  var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  try {
+    spreadsheet.setActiveSheet(spreadsheet.getSheetByName(scheduleSheet));
+  } catch(e) {
+    // insert after form responses
+    spreadsheet.insertSheet(scheduleSheet, 1);
+  }
+  writeBlankSchedule(scheduleSheet);
 }
 
 /**
@@ -67,7 +82,7 @@ function fetchSurveyData() {
       tutor.shifts = getHours_(totalHours);
       
       // optional: total hours tutor is willing to work
-//      tutor.givenHours = getGivenHours(tutor);
+      tutor.givenHours = getGivenHours(tutor);
       tutors.push(tutor);
     }
     Logger.log(tutors);
@@ -142,4 +157,47 @@ function getGivenHours(tutor) {
     hours += shiftsPerDay.length;
   }
   return hours;
+}
+
+/** 
+ * Pre-formats a blank schedule with the days of the week, shift hours, and 
+ * an empty grid. 
+ */
+function writeBlankSchedule(sheetName) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  sheet.clear();
+  // top row
+  sheet.getRange('B1:G1')
+    .setValues([['Sunday','Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']])
+    .setFontWeight('bold')
+  // left column
+  var leftColumn = 'A';
+  var shiftRow = STARTING_CELL;
+  allShifts.forEach(function(shift) {
+    sheet.getRange(leftColumn+shiftRow)
+      .setValue(shift)
+      .setFontWeight('bold');
+    shiftRow += MAX_TUTORS;  
+  });
+  // per shift per day
+  for (var i = 0; i < daysOfTheWeek.length; i++) {
+    var column = columns[i];
+    var startRow = STARTING_CELL;
+    var endRow = startRow + MAX_TUTORS-1; // subtract one because the group of cells is inclusive
+    for (var j = 0; j < allShifts.length; j++) {
+      var cluster = column+startRow + ':' + column+endRow;
+      sheet.getRange(cluster)
+        .setBorder(true, true, true, true, false, false, "black", SpreadsheetApp.BorderStyle.SOLID);
+      startRow += MAX_TUTORS;
+      endRow += MAX_TUTORS;
+    }
+  }
+  // block out non-active shifts (Sunday and Friday)
+  nonActiveShifts.forEach(function(range) {
+    blockOut_(sheet, range);
+  });  
+}
+
+function blockOut_(sheet, range) {
+  sheet.getRange(range).setBackground('#D3D3D3');
 }
