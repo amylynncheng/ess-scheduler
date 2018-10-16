@@ -1,4 +1,4 @@
-var spreadsheetId = '1Gsycm1tMUYzACA8FtnWR3Q09yLQ8_B8AMtUvbxeCKyA';
+var spreadsheetId = '1E82wrm8FP9MftoKQkWQAK7ecz9LhoJdSSS2OiPzisGc';
 var scheduleSheet = 'New Schedule';
 var tutors = [];
 var daysOfTheWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
@@ -6,7 +6,7 @@ var columns = ['B','C','D','E','F','G'];
 var allShifts = ['9-10','10-11','11-12','12-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8','8-9'];
 var nonActiveShifts = ['B2:B25','B42:B49','G22:G49'];
 
-var SURVEY_NAME = 'Form Responses';
+var SURVEY_NAME = 'Form Responses 1';
 var MAX_TUTORS = 4;
 var DAYS_WITH_INDV_AND_GROUP = 4;
 var STARTING_CELL = 2;
@@ -85,7 +85,6 @@ function fetchSurveyData() {
       tutor.givenHours = getGivenHours(tutor);
       tutors.push(tutor);
     }
-    Logger.log(tutors);
   }
 }
 
