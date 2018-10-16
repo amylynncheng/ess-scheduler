@@ -2,9 +2,34 @@
 <html>
   <head>
     <base target="_top">
+    <!-- Applies Google styling to buttons and other elements. -->
+    <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
+    
+    <style>
+    .branding-below {
+      bottom: 50px;
+      top: 0;
+    }
+    
+    .space-below {
+      bottom: 5px;
+    }
+    </style>
   </head>
   <body>
-    
+    <div class="sidebar branding-below">
+      <div class="block form-group space-below">
+        <label for="overflow-tutors">
+          <b>Overflow Tutors:</b></label>
+        <textarea id="overflow-tutors" rows="5" style="width: 50%;">
+        </textarea>
+      </div>
+    </div>
+
+    <div class="sidebar bottom">
+      <!-- TODO: add a help link -->    
+      <span class="gray">Questions? Ask Amy</span>
+    </div>
   </body>
 </html>
 
