@@ -9,9 +9,10 @@ var nonActiveShifts = ['B2:B25','B42:B49','G22:G49'];
 var SURVEY_NAME = 'Form Responses 1';
 var MAX_TUTORS = 4;
 var DAYS_WITH_INDV_AND_GROUP = 4;
-var STARTING_CELL = 2;
+var STARTING_ROW = 2;
 var FRIDAY_HOURS_CELL = 4;
 var SUNDAY_HOURS_CELL = 9;
+var LAST_SHIFT = allShifts.indexOf('1-2');
 
 /**
  * Creates a menu entry in the Google Sheets UI when the document is opened.
@@ -43,7 +44,11 @@ function main() {
   writeBlankSchedule(scheduleSheet);
   fetchSurveyData();
   tutors = sortByGivenHours_(tutors);
-  Logger.log(tutors);
+  // construct schedule
+  for (var i = 0; i < daysOfTheWeek.length; i++) {
+    var currentDayTutors = createSchedule(tutors, daysOfTheWeek[i]);
+//    Logger.log(currentDayTutors);
+  }
 }
 
 /**
@@ -161,6 +166,13 @@ function getGivenHours(tutor) {
   return hours;
 }
 
+function sortByGivenHours_(tutors) {
+  tutors.sort(function(a,b) {
+    return a.givenHours - b.givenHours;
+  });
+  return tutors; // bc apparently js doesn't pass by reference >:(
+}
+
 /** 
  * Pre-formats a blank schedule with the days of the week, shift hours, and 
  * an empty grid. 
@@ -174,7 +186,7 @@ function writeBlankSchedule(sheetName) {
     .setFontWeight('bold')
   // left column
   var leftColumn = 'A';
-  var shiftRow = STARTING_CELL;
+  var shiftRow = STARTING_ROW;
   allShifts.forEach(function(shift) {
     sheet.getRange(leftColumn+shiftRow)
       .setValue(shift)
@@ -184,7 +196,7 @@ function writeBlankSchedule(sheetName) {
   // per shift per day
   for (var i = 0; i < daysOfTheWeek.length; i++) {
     var column = columns[i];
-    var startRow = STARTING_CELL;
+    var startRow = STARTING_ROW;
     var endRow = startRow + MAX_TUTORS-1; // subtract one because the group of cells is inclusive
     for (var j = 0; j < allShifts.length; j++) {
       var cluster = column+startRow + ':' + column+endRow;
@@ -204,9 +216,23 @@ function blockOut_(sheet, range) {
   sheet.getRange(range).setBackground('#D3D3D3');
 }
 
-function sortByGivenHours_(tutors) {
-  tutors.sort(function(a,b) {
-    return a.givenHours - b.givenHours;
-  });
-  return tutors; // bc apparently js doesn't pass by reference >:(
+/**
+ * Returns an array of arrays - each of which represents a shift,
+ * and contains the tutors that work that shift.
+ */
+function createSchedule(tutors, dayOfWeek) {
+  var schedule = [];
+  for (var i = 0; i < allShifts.length; i++) {
+    schedule[i] = [];
+    // no more active shifts after Friday, 1-2 pm 
+    if (dayOfWeek === 'friday' && i > LAST_SHIFT) {
+      break;
+    }
+    tutors.forEach(function(tutor) {
+      if (tutor.shifts[dayOfWeek].indexOf(allShifts[i]) != -1) {
+        schedule[i].push(tutor.name); 
+      }
+    });
+  }
+  return schedule;
 }
