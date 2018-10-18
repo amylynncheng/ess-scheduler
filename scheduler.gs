@@ -47,7 +47,13 @@ function main() {
   // construct schedule
   for (var i = 0; i < daysOfTheWeek.length; i++) {
     var currentDayTutors = createSchedule(tutors, daysOfTheWeek[i]);
-//    Logger.log(currentDayTutors);
+    var shiftRow = STARTING_ROW;
+    for (var j = 0; j < currentDayTutors.length; j++) {
+      var dayColumn = columns[i];
+      var currentShift = currentDayTutors[j];
+      writeToSchedule(currentShift, dayColumn, shiftRow, scheduleSheet);
+      shiftRow += MAX_TUTORS;
+    }  
   }
 }
 
@@ -230,9 +236,30 @@ function createSchedule(tutors, dayOfWeek) {
     }
     tutors.forEach(function(tutor) {
       if (tutor.shifts[dayOfWeek].indexOf(allShifts[i]) != -1) {
-        schedule[i].push(tutor.name); 
+        schedule[i].push(tutor); 
       }
     });
   }
   return schedule;
+}
+
+/**
+ * Populates the range of cells for a given day and shift, 
+ * represented by the column and row respectively, with the names
+ * of the tutors that work during that shift.
+ */
+function writeToSchedule(tutorsPerShift, column, row, scheduleName) { 
+  // TODO: add waitlisting for non-priority tutors
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleName);
+  var cell = sheet.getRange(column+row);
+  for (var count = 0; count < MAX_TUTORS; count++) {
+    if (!tutorsPerShift[count]) {
+      cell.setValue('');
+    } else {
+      // write the tutor's name in the shift's cell
+      cell.setValue(tutorsPerShift[count].name);
+    }
+    row++;
+    cell = sheet.getRange(column+row);
+  }
 }
