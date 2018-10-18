@@ -41,6 +41,9 @@ function main() {
     spreadsheet.insertSheet(scheduleSheet, 1);
   }
   writeBlankSchedule(scheduleSheet);
+  fetchSurveyData();
+  tutors = sortByGivenHours_(tutors);
+  Logger.log(tutors);
 }
 
 /**
@@ -199,4 +202,11 @@ function writeBlankSchedule(sheetName) {
 
 function blockOut_(sheet, range) {
   sheet.getRange(range).setBackground('#D3D3D3');
+}
+
+function sortByGivenHours_(tutors) {
+  tutors.sort(function(a,b) {
+    return a.givenHours - b.givenHours;
+  });
+  return tutors; // bc apparently js doesn't pass by reference >:(
 }
