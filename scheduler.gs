@@ -51,10 +51,12 @@ function main() {
     for (var j = 0; j < currentDayTutors.length; j++) {
       var dayColumn = columns[i];
       var currentShift = currentDayTutors[j];
-      writeToSchedule(currentShift, dayColumn, shiftRow, scheduleSheet);
+      writeToSchedule(currentShift, dayColumn, shiftRow);
       shiftRow += MAX_TUTORS;
     }  
   }
+  // ensure that there is no invalid data
+  clearNonActiveShifts();
 }
 
 /**
@@ -212,14 +214,14 @@ function writeBlankSchedule(sheetName) {
       endRow += MAX_TUTORS;
     }
   }
-  // block out non-active shifts (Sunday and Friday)
-  nonActiveShifts.forEach(function(range) {
-    blockOut_(sheet, range);
-  });  
 }
 
-function blockOut_(sheet, range) {
-  sheet.getRange(range).setBackground('#D3D3D3');
+function clearNonActiveShifts() {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleSheet);
+  nonActiveShifts.forEach(function(range) {
+    // block out shift on sheet
+    sheet.getRange(range).clear().setBackground('#D3D3D3');
+  }); 
 }
 
 /**
@@ -248,9 +250,9 @@ function createSchedule(tutors, dayOfWeek) {
  * represented by the column and row respectively, with the names
  * of the tutors that work during that shift.
  */
-function writeToSchedule(tutorsPerShift, column, row, scheduleName) { 
+function writeToSchedule(tutorsPerShift, column, row) { 
   // TODO: add waitlisting for non-priority tutors
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleName);
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleSheet);
   var cell = sheet.getRange(column+row);
   for (var count = 0; count < MAX_TUTORS; count++) {
     if (!tutorsPerShift[count]) {
