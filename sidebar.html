@@ -18,19 +18,52 @@
   </head>
   <body>
     <div class="sidebar branding-below">
-      <div class="block form-group space-below">
-        <label for="overflow-tutors">
-          <b>Overflow Tutors:</b></label>
-        <textarea id="overflow-tutors" rows="5" style="width: 50%;">
-        </textarea>
-      </div>
+      <form onsubmit="return(false)">
+        <div class="block form-group">
+          <label for="waitlist-tutors"><b>Waitlisted tutors:</b></label>
+          <ol id="waitlist">
+          </ol>
+          <textarea class="width-100" id="waitlist-tutors" rows="8"></textarea>
+        </div>
+        <div class="block space-below" id="button-bar">
+          <button class="blue" id="check-waitlist-button">Check waitlist</button>
+        </div>
+        <div id="error-message"></div>
+      </form>
     </div>
 
     <div class="sidebar bottom">
       <!-- TODO: add a help link -->    
       <span class="gray">Questions? Ask Amy</span>
     </div>
+    
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script>
+      /**
+       * On document load, assign click handlers.
+       */
+      $(function() {
+        $('#check-waitlist-button').click(checkWaitlist);
+      });
+      
+      function checkWaitlist() {
+        google.script.run
+          .withSuccessHandler(showWaitlist)
+          .withFailureHandler(showRangeError)
+          .findWaitlistForSelection();
+      }
+           
+      function showWaitlist(tutors) {
+        var waitlist = $('#waitlist');
+        waitlist.empty();
+        for (var i = 0; i < tutors.length; i++) {
+          waitlist.append('<li>' + tutors[i] + '</li>');
+        }
+      }
+      
+      function showRangeError(range) {
+      }
+    </script>
+    
   </body>
 </html>
-
-

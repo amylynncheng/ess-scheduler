@@ -2,8 +2,12 @@ var spreadsheetId = '1E82wrm8FP9MftoKQkWQAK7ecz9LhoJdSSS2OiPzisGc';
 var scheduleSheet = 'New Schedule';
 var tutors = [];
 var daysOfTheWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+// names of the columns that represent a day of the week.
 var columns = ['B','C','D','E','F','G'];
 var allShifts = ['9-10','10-11','11-12','12-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8','8-9'];
+// an array containing ranges in A1 format, each of which represent a shift block for the given schedule.
+var allShiftRanges = [];
+// ranges of all shifts in which tutoring is not offered.
 var nonActiveShifts = ['B2:B25','B42:B49','G22:G49'];
 
 var SURVEY_NAME = 'Form Responses 1';
@@ -20,6 +24,7 @@ var LAST_SHIFT = allShifts.indexOf('1-2');
 function onOpen() {
   SpreadsheetApp.getUi()
     .createMenu('Custom Menu')
+    .addItem('Create schedule', 'main')
     .addItem('Show sidebar', 'showSidebar')
     .addToUi();
 }
@@ -31,6 +36,24 @@ function showSidebar() {
   var html = HtmlService.createHtmlOutputFromFile('sidebar')
       .setTitle('Scheduling Sidebar');
   SpreadsheetApp.getUi().showSidebar(html);
+}
+
+function doGet() {
+  return HtmlService.createHtmlOutputFromFile('sidebar');
+}
+
+/**
+ * Gets the range currently selected by the user.
+ */
+function findWaitlistForSelection() {
+  var range = SpreadsheetApp.getActive().getActiveRange().getA1Notation();
+  Logger.log(range);
+  // TODO: check if selected range fits the valid ranges of shifts.
+  for (var i = 0; i < allShiftRanges.length; i++) {
+    
+  }
+  // TODO: return list of tutors that are waitlisted for the selected range.
+  return [];
 }
 
 function main() {
@@ -183,7 +206,7 @@ function sortByGivenHours_(tutors) {
 
 /** 
  * Pre-formats a blank schedule with the days of the week, shift hours, and 
- * an empty grid. 
+ * an empty grid. Also populates the array for all shift ranges.
  */
 function writeBlankSchedule(sheetName) {
   var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
@@ -208,12 +231,15 @@ function writeBlankSchedule(sheetName) {
     var endRow = startRow + MAX_TUTORS-1; // subtract one because the group of cells is inclusive
     for (var j = 0; j < allShifts.length; j++) {
       var cluster = column+startRow + ':' + column+endRow;
+      // store the range of the current shift block
+      allShiftRanges.push(cluster);
       sheet.getRange(cluster)
         .setBorder(true, true, true, true, false, false, "black", SpreadsheetApp.BorderStyle.SOLID);
       startRow += MAX_TUTORS;
       endRow += MAX_TUTORS;
     }
   }
+  
 }
 
 function clearNonActiveShifts() {
