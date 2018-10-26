@@ -1,16 +1,14 @@
 var spreadsheetId = '1E82wrm8FP9MftoKQkWQAK7ecz9LhoJdSSS2OiPzisGc';
-var scheduleSheet = 'New Schedule';
 var tutors = [];
 var daysOfTheWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 // names of the columns that represent a day of the week.
 var columns = ['B','C','D','E','F','G'];
 var allShifts = ['9-10','10-11','11-12','12-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8','8-9'];
-// an array containing ranges in A1 format, each of which represent a shift block for the given schedule.
-var allShiftRanges = [];
 // ranges of all shifts in which tutoring is not offered.
 var nonActiveShifts = ['B2:B25','B42:B49','G22:G49'];
 
 var SURVEY_NAME = 'Form Responses 1';
+var SCHEDULE_SHEET = 'New Schedule';
 var MAX_TUTORS = 4;
 var DAYS_WITH_INDV_AND_GROUP = 4;
 var STARTING_ROW = 2;
@@ -35,6 +33,8 @@ function onOpen() {
 function showSidebar() {
   var html = HtmlService.createHtmlOutputFromFile('sidebar')
       .setTitle('Scheduling Sidebar');
+  fetchSurveyData();
+  getAllShiftRanges();
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
@@ -46,25 +46,57 @@ function doGet() {
  * Gets the range currently selected by the user.
  */
 function findWaitlistForSelection() {
-  var range = SpreadsheetApp.getActive().getActiveRange().getA1Notation();
+  var range = SpreadsheetApp.getActive().getActiveRange();
+  var allShiftRanges = getAllShiftRanges();
   Logger.log(range);
-  // TODO: check if selected range fits the valid ranges of shifts.
-  for (var i = 0; i < allShiftRanges.length; i++) {
-    
+  Logger.log(allShiftRanges);
+  // check if selected range fits the valid ranges of shifts.
+  var isValidRange = validateRange(range, allShiftRanges);
+  if (isValidRange) {
+    // TODO: return list of tutors that are waitlisted for the selected range.
+  } else {
+    throw new Error('Invalid range selected.');
   }
-  // TODO: return list of tutors that are waitlisted for the selected range.
-  return [];
+}
+
+/**
+ * Given a Range object, return whether it is within the bounds
+ * of a shift on the schedule.
+ */
+function validateRange(range, allRanges) {
+  // TODO: implement validateRange
+}
+
+/**
+ * Returns an array containing ranges in A1 format, each of which represent 
+ * a shift block for the given schedule.
+ */
+function getAllShiftRanges() {
+  var allShiftRanges = [];
+  for (var i = 0; i < daysOfTheWeek.length; i++) {
+    var column = columns[i];
+    var startRow = STARTING_ROW;
+    var endRow = startRow + MAX_TUTORS-1; // subtract one because the group of cells is inclusive
+    for (var j = 0; j < allShifts.length; j++) {
+      var cluster = column+startRow + ':' + column+endRow;
+      // store the range of the current shift block
+      allShiftRanges.push(cluster);
+      startRow += MAX_TUTORS;
+      endRow += MAX_TUTORS;
+    }
+  }
+  return allShiftRanges;
 }
 
 function main() {
   var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   try {
-    spreadsheet.setActiveSheet(spreadsheet.getSheetByName(scheduleSheet));
+    spreadsheet.setActiveSheet(spreadsheet.getSheetByName(SCHEDULE_SHEET));
   } catch(e) {
     // insert after form responses
-    spreadsheet.insertSheet(scheduleSheet, 1);
+    spreadsheet.insertSheet(SCHEDULE_SHEET, 1);
   }
-  writeBlankSchedule(scheduleSheet);
+  writeBlankSchedule(SCHEDULE_SHEET);
   fetchSurveyData();
   tutors = sortByGivenHours_(tutors);
   // construct schedule
@@ -225,25 +257,15 @@ function writeBlankSchedule(sheetName) {
     shiftRow += MAX_TUTORS;  
   });
   // per shift per day
-  for (var i = 0; i < daysOfTheWeek.length; i++) {
-    var column = columns[i];
-    var startRow = STARTING_ROW;
-    var endRow = startRow + MAX_TUTORS-1; // subtract one because the group of cells is inclusive
-    for (var j = 0; j < allShifts.length; j++) {
-      var cluster = column+startRow + ':' + column+endRow;
-      // store the range of the current shift block
-      allShiftRanges.push(cluster);
-      sheet.getRange(cluster)
-        .setBorder(true, true, true, true, false, false, "black", SpreadsheetApp.BorderStyle.SOLID);
-      startRow += MAX_TUTORS;
-      endRow += MAX_TUTORS;
-    }
-  }
-  
+  var shiftBlocks = getAllShiftRanges();
+  shiftBlocks.forEach(function(block) {
+    sheet.getRange(block)
+      .setBorder(true, true, true, true, false, false, "black", SpreadsheetApp.BorderStyle.SOLID);
+  });
 }
 
 function clearNonActiveShifts() {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleSheet);
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
   nonActiveShifts.forEach(function(range) {
     // block out shift on sheet
     sheet.getRange(range).clear().setBackground('#D3D3D3');
@@ -278,7 +300,7 @@ function createSchedule(tutors, dayOfWeek) {
  */
 function writeToSchedule(tutorsPerShift, column, row) { 
   // TODO: add waitlisting for non-priority tutors
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleSheet);
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
   var cell = sheet.getRange(column+row);
   for (var count = 0; count < MAX_TUTORS; count++) {
     if (!tutorsPerShift[count]) {
