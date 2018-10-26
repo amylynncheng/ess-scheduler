@@ -155,6 +155,8 @@ function main() {
   }
   // ensure that there is no invalid data
   clearNonActiveShifts();
+  // display table of available hours
+  listNumberOfHours(tutors, SCHEDULE_SHEET);
 }
 
 /**
@@ -278,6 +280,41 @@ function sortByGivenHours_(tutors) {
     return a.givenHours - b.givenHours;
   });
   return tutors; // bc apparently js doesn't pass by reference >:(
+}
+
+function sortByLastName_(tutors) {
+  tutors.sort(function(a,b) {
+    var aName = a.name.split(' ');
+    var aLast = aName[aName.length-1];
+    var bName = b.name.split(' ');
+    var bLast = bName[bName.length-1];
+    if (aLast < bLast) {
+      return -1;
+    } else if (aLast > bLast) {
+      return 1;
+    }
+    return 0;
+  });
+  return tutors;
+}
+
+/** 
+ * Writes a two-columned table for each tutor, displaying his/her name
+ * and the number of hours he/she is able to work.
+ */
+function listNumberOfHours(tutors, scheduleName) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleName);
+  var row = STARTING_ROW;
+  var nameCell = sheet.getRange('I'+row);
+  var hourCell = sheet.getRange('J'+row);
+  tutors = sortByLastName_(tutors);
+  for (var i = 0; i < tutors.length; i++) {
+    nameCell.setValue(tutors[i].name);
+    hourCell.setValue(tutors[i].givenHours);
+    row++;
+    nameCell = sheet.getRange('I'+row);
+    hourCell = sheet.getRange('J'+row);
+  }
 }
 
 /** 
