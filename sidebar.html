@@ -23,7 +23,6 @@
           <label for="waitlist-tutors"><b>Waitlisted tutors:</b></label>
           <ol id="waitlist">
           </ol>
-          <textarea class="width-100" id="waitlist-tutors" rows="8"></textarea>
         </div>
         <div class="block space-below" id="button-bar">
           <button class="blue" id="check-waitlist-button">Check waitlist</button>
@@ -47,6 +46,8 @@
       });
       
       function checkWaitlist() {
+        $('#error-message').empty();
+        $('#waitlist').empty();
         google.script.run
           .withSuccessHandler(showWaitlist)
           .withFailureHandler(showRangeError)

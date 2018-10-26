@@ -33,8 +33,6 @@ function onOpen() {
 function showSidebar() {
   var html = HtmlService.createHtmlOutputFromFile('sidebar')
       .setTitle('Scheduling Sidebar');
-  fetchSurveyData();
-  getAllShiftRanges();
   SpreadsheetApp.getUi().showSidebar(html);
 }
 
@@ -46,25 +44,70 @@ function doGet() {
  * Gets the range currently selected by the user.
  */
 function findWaitlistForSelection() {
-  var range = SpreadsheetApp.getActive().getActiveRange();
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var range = SpreadsheetApp.getActive().getActiveRange().getA1Notation();
+  fetchSurveyData();
   var allShiftRanges = getAllShiftRanges();
-  Logger.log(range);
-  Logger.log(allShiftRanges);
   // check if selected range fits the valid ranges of shifts.
   var isValidRange = validateRange(range, allShiftRanges);
   if (isValidRange) {
-    // TODO: return list of tutors that are waitlisted for the selected range.
+    // return list of tutors that are waitlisted for the selected range.
+    var day = getDayFromRange(range);
+    var shift = getShiftFromRange(range);
+    var waitlist = getWaitlistedTutors(range, day, shift);
+    var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
+    return waitlistNames;
   } else {
     throw new Error('Invalid range selected.');
   }
 }
 
 /**
- * Given a Range object, return whether it is within the bounds
+ * Given a range in A1 notation, return whether it is within the bounds
  * of a shift on the schedule.
  */
-function validateRange(range, allRanges) {
-  // TODO: implement validateRange
+function validateRange(range, allValidRanges) {
+  for (var i = 0; i < allValidRanges.length; i++) {
+    if (range === allValidRanges[i]) return true;
+    // TODO: add check if in non active shift    
+  }
+  return false;
+}
+
+function getDayFromRange(range) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var column = sheet.getRange(range).getColumn();
+  return sheet.getRange(1, column).getValue().toLowerCase();
+}
+
+function getShiftFromRange(range) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var row = sheet.getRange(range).getRow();
+  return sheet.getRange(row, 1).getValue();
+}
+
+function getWaitlistedTutors(range, day, shift) {
+  var currentTutors = getTutorsOnScheudle(range);
+  Logger.log(currentTutors);
+  var waitlist = tutors.filter(function(tutor) {
+    var notOnShift = currentTutors.indexOf(tutor.name) === -1;
+    var canWorkShift = tutor.shifts[day].indexOf(shift) >= 0;
+    return (notOnShift && canWorkShift);
+  });
+  return waitlist;
+}
+
+function getTutorsOnScheudle(range) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  // getValues returns a 2d array, indexed by row then column
+  var onSchedule = sheet.getRange(range).getValues();
+  // flatten result into a single 1d array for simpler iteration
+  var currentTutors = [].concat.apply([], onSchedule);
+  // remove all empty data points
+  currentTutors = currentTutors.filter(function(tutor) {
+    return tutor !== '';
+  });
+  return currentTutors;
 }
 
 /**
@@ -119,6 +162,7 @@ function main() {
  * survey responses.
  */
 function fetchSurveyData() {
+  tutors = []; // reset data
   const survey = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SURVEY_NAME);
   const lastRow = survey.getLastRow();
   const infoRange = survey.getRange('A2:F' + lastRow);
@@ -253,7 +297,8 @@ function writeBlankSchedule(sheetName) {
   allShifts.forEach(function(shift) {
     sheet.getRange(leftColumn+shiftRow)
       .setValue(shift)
-      .setFontWeight('bold');
+      .setFontWeight('bold')
+      .setHorizontalAlignment('right');
     shiftRow += MAX_TUTORS;  
   });
   // per shift per day
