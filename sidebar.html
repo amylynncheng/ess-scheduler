@@ -4,17 +4,7 @@
     <base target="_top">
     <!-- Applies Google styling to buttons and other elements. -->
     <link rel="stylesheet" href="https://ssl.gstatic.com/docs/script/css/add-ons1.css">
-    
-    <style>
-    .branding-below {
-      bottom: 50px;
-      top: 0;
-    }
-    
-    .space-below {
-      bottom: 5px;
-    }
-    </style>
+    <?!= include('styles'); ?>
   </head>
   <body>
     <div class="sidebar branding-below">
@@ -37,35 +27,6 @@
     </div>
     
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
-    <script>
-      /**
-       * On document load, assign click handlers.
-       */
-      $(function() {
-        $('#check-waitlist-button').click(checkWaitlist);
-      });
-      
-      function checkWaitlist() {
-        $('#error-message').empty();
-        $('#waitlist').empty();
-        google.script.run
-          .withSuccessHandler(showWaitlist)
-          .withFailureHandler(showRangeError)
-          .findWaitlistForSelection();
-      }
-           
-      function showWaitlist(tutors) {
-        var waitlist = $('#waitlist');
-        waitlist.empty();
-        for (var i = 0; i < tutors.length; i++) {
-          waitlist.append('<li>' + tutors[i] + '</li>');
-        }
-      }
-      
-      function showRangeError(error) {
-        $('#error-message').text(error.message);
-      }
-    </script>
-    
+    <?!= include('client-side'); ?>    
   </body>
 </html>

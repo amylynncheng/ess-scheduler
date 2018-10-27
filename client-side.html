@@ -1,0 +1,29 @@
+<script>
+  /**
+   * On document load, assign click handlers.
+   */
+  $(function() {
+    $('#check-waitlist-button').click(checkWaitlist);
+  });
+  
+  function checkWaitlist() {
+    $('#error-message').empty();
+    $('#waitlist').empty();
+    google.script.run
+      .withSuccessHandler(showWaitlist)
+      .withFailureHandler(showRangeError)
+      .findWaitlistForSelection();
+  }
+       
+  function showWaitlist(tutors) {
+    var waitlist = $('#waitlist');
+    waitlist.empty();
+    for (var i = 0; i < tutors.length; i++) {
+      waitlist.append('<li>' + tutors[i] + '</li>');
+    }
+  }
+  
+  function showRangeError(error) {
+    $('#error-message').text(error.message);
+  }
+</script>

@@ -31,10 +31,18 @@ function onOpen() {
  * Opens a sidebar in the document containing the add-on's user interface.
  */
 function showSidebar() {
-  var html = HtmlService.createHtmlOutputFromFile('sidebar')
+  var html = HtmlService.createTemplateFromFile('sidebar')
+      .evaluate()
       .setTitle('Scheduling Sidebar');
   SpreadsheetApp.getUi().showSidebar(html);
 }
+
+/**
+ * Used for inserting templated HTML in the sidebar.
+ */
+function include(file) {
+  return HtmlService.createHtmlOutputFromFile(file).getContent();
+};
 
 function doGet() {
   return HtmlService.createHtmlOutputFromFile('sidebar');
@@ -56,6 +64,7 @@ function findWaitlistForSelection() {
     var shift = getShiftFromRange(range);
     var waitlist = getWaitlistedTutors(range, day, shift);
     var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
+    Logger.log(waitlist);
     return waitlistNames;
   } else {
     throw new Error('Invalid range selected.');
@@ -88,7 +97,6 @@ function getShiftFromRange(range) {
 
 function getWaitlistedTutors(range, day, shift) {
   var currentTutors = getTutorsOnScheudle(range);
-  Logger.log(currentTutors);
   var waitlist = tutors.filter(function(tutor) {
     var notOnShift = currentTutors.indexOf(tutor.name) === -1;
     var canWorkShift = tutor.shifts[day].indexOf(shift) >= 0;
