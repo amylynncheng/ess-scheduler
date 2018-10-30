@@ -1,14 +1,28 @@
 <script>
+  var daysOfTheWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+  var allShifts = ['9-10','10-11','11-12','12-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8','8-9'];
+
   /**
-   * On document load, assign click handlers.
+   * On document load, assign click handlers and populate select options.
    */
   $(function() {
     $('#check-waitlist-button').click(checkWaitlist);
+    var selectDay = $('#select-day');
+    var selectShift = $('#select-shift');
+    populate(selectDay, daysOfTheWeek);
+    populate(selectShift, allShifts);
   });
+  
+  function populate(select, list) {
+    for (var i = 0; i < list.length; i++) {
+      select.append('<option value="' + list[i].toLowerCase() + '">' + list[i] + '</option>');
+    }
+  }
   
   function checkWaitlist() {
     $('#error-message').empty();
     $('#waitlist').empty();
+    $('#waitlist-label').empty();
     google.script.run
       .withSuccessHandler(showWaitlist)
       .withFailureHandler(showRangeError)
@@ -17,6 +31,9 @@
        
   function showWaitlist(tutors) {
     var waitlist = $('#waitlist');
+    var label = $('#waitlist-label');
+    label.text('Waitlisted tutors:');
+    label.css("font-weight","Bold");
     waitlist.empty();
     for (var i = 0; i < tutors.length; i++) {
       waitlist.append('<li>' + tutors[i] + '</li>');

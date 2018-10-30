@@ -7,25 +7,35 @@
     <?!= include('styles'); ?>
   </head>
   <body>
-    <div class="sidebar branding-below">
-      <form onsubmit="return(false)">
-        <div class="block form-group">
-          <label for="waitlist-tutors"><b>Waitlisted tutors:</b></label>
-          <ol id="waitlist">
-          </ol>
+    <div class="sidebar">
+      <!-- waitlist section -->
+      <div class="branding-below space-below">
+        <!-- input options -->
+        <div class="extra-padding">
+          <label for="select-day">Day: </label>
+          <select id="select-day">
+          </select>
         </div>
-        <div class="block space-below" id="button-bar">
+        <div class="extra-padding">
+          <label for="select-shift">Shift: </label>
+          <select id="select-shift">
+          </select>
+        </div>
+        <br>
+        <div class="block space-below">
           <button class="blue" id="check-waitlist-button">Check waitlist</button>
         </div>
+        <!-- waitlist results -->
+        <p id="waitlist-label"></p>
+        <ol id="waitlist">
+        </ol>
         <div id="error-message"></div>
-      </form>
+      </div>
     </div>
-
     <div class="sidebar bottom">
       <!-- TODO: add a help link -->    
       <span class="gray">Questions? Ask Amy</span>
     </div>
-    
     <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
     <?!= include('client-side'); ?>    
   </body>
