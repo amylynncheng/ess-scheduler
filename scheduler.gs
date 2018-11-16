@@ -51,7 +51,7 @@ function doGet() {
 /**
  * Gets the range currently selected by the user.
  */
-function findWaitlistForSelection() {
+function findWaitlistForHighlight() {
   var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
   var range = SpreadsheetApp.getActive().getActiveRange().getA1Notation();
   fetchSurveyData();
@@ -64,10 +64,24 @@ function findWaitlistForSelection() {
     var shift = getShiftFromRange(range);
     var waitlist = getWaitlistedTutors(range, day, shift);
     var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
-    Logger.log(waitlist);
     return waitlistNames;
   } else {
     throw new Error('Invalid range selected.');
+  }
+}
+
+/**
+ * Given the 
+ */
+function findWaitlistForSelection(day, shift) {
+  day = day.toLowerCase();
+  if (true) {
+    // return list of tutors that are waitlisted for the selected range.
+    var waitlist = getWaitlistedTutors(range, day, shift);
+    var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
+    return waitlistNames;
+  } else {
+    throw new Error('Invalid values ' + day + ', ' + shift + ' selected.');
   }
 }
 
