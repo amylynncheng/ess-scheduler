@@ -177,8 +177,9 @@ function main() {
   }
   // ensure that there is no invalid data
   clearNonActiveShifts();
-  // display table of available hours
-  listNumberOfHours(tutors, SCHEDULE_SHEET);
+  // display table of available and assigned hours
+  listNumberOfHours('givenHours', tutors, SCHEDULE_SHEET, 'I', 'J');
+  listNumberOfHours('assignedHours', tutors, SCHEDULE_SHEET, 'L', 'M');
 }
 
 /**
@@ -322,20 +323,20 @@ function sortByLastName_(tutors) {
 
 /** 
  * Writes a two-columned table for each tutor, displaying his/her name
- * and the number of hours he/she is able to work.
+ * and the number of [type = given or assigned] hours.
  */
-function listNumberOfHours(tutors, scheduleName) {
+function listNumberOfHours(type, tutors, scheduleName, nameCol, hourCol) {
   var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleName);
   var row = STARTING_ROW;
-  var nameCell = sheet.getRange('I'+row);
-  var hourCell = sheet.getRange('J'+row);
+  var nameCell = sheet.getRange(nameCol+row);
+  var hourCell = sheet.getRange(hourCol+row);
   tutors = sortByLastName_(tutors);
   for (var i = 0; i < tutors.length; i++) {
     nameCell.setValue(tutors[i].name);
-    hourCell.setValue(tutors[i].givenHours);
+    hourCell.setValue(tutors[i][type]);
     row++;
-    nameCell = sheet.getRange('I'+row);
-    hourCell = sheet.getRange('J'+row);
+    nameCell = sheet.getRange(nameCol+row);
+    hourCell = sheet.getRange(hourCol+row);
   }
 }
 
@@ -410,8 +411,15 @@ function writeToSchedule(tutorsPerShift, column, row) {
     if (!tutorsPerShift[count]) {
       cell.setValue('');
     } else {
+      var tutor = tutorsPerShift[count];
       // write the tutor's name in the shift's cell
-      cell.setValue(tutorsPerShift[count].name);
+      cell.setValue(tutor.name);
+      // increment the assigned hours of the given tutor
+      if (tutor.assignedHours === undefined) {
+        tutor.assignedHours = 1;
+      } else {
+        tutor.assignedHours++;
+      }
     }
     row++;
     cell = sheet.getRange(column+row);
