@@ -59,11 +59,12 @@ function showPrompt() {
  * the shifts that he/she is scheduled to work.
  */
 function sendEmailTo(name) {
-  tutors = fetchSurveyData();
+  fetchSurveyData();
   var tutor = tutors.filter(function(tutor) {
     return tutor.name === name;
-  });
-  Logger.log(tutors);
+  })[0];
+  Logger.log(tutor);
+  Logger.log(tutor.email);
   GmailApp.sendEmail(tutor.email, 
     "ESS Tutoring: Shifts for " + tutor.name,
      "Test.");
@@ -142,7 +143,7 @@ function getShiftFromRange(range) {
 }
 
 function getWaitlistedTutors(range, day, shift) {
-  var currentTutors = getTutorsOnScheudle(range);
+  var currentTutors = getTutorsOnSchedule(range);
   var waitlist = tutors.filter(function(tutor) {
     var notOnShift = currentTutors.indexOf(tutor.name) === -1;
     var canWorkShift = tutor.shifts[day].indexOf(shift) >= 0;
@@ -151,7 +152,7 @@ function getWaitlistedTutors(range, day, shift) {
   return waitlist;
 }
 
-function getTutorsOnScheudle(range) {
+function getTutorsOnSchedule(range) {
   var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
   // getValues returns a 2d array, indexed by row then column
   var onSchedule = sheet.getRange(range).getValues();
@@ -175,9 +176,12 @@ function getAllShiftRanges() {
     var startRow = STARTING_ROW;
     var endRow = startRow + MAX_TUTORS-1; // subtract one because the group of cells is inclusive
     for (var j = 0; j < allShifts.length; j++) {
-      var cluster = column+startRow + ':' + column+endRow;
+      var shift = new Object();
+      shift.range = column+startRow + ':' + column+endRow;
+      shift.day = daysOfTheWeek[i];
+      shift.time = allShifts[j];
       // store the range of the current shift block
-      allShiftRanges.push(cluster);
+      allShiftRanges.push(shift);
       startRow += MAX_TUTORS;
       endRow += MAX_TUTORS;
     }
@@ -456,4 +460,32 @@ function writeToSchedule(tutorsPerShift, column, row) {
     row++;
     cell = sheet.getRange(column+row);
   }
+}
+
+/**
+ * Returns an object with properties equal to the days of the week.
+ * Each property is an array containing a string representing the shift time
+ * that the tutor is assigned to work.
+ */
+function getAssignedShifts(tutorName, sheetName) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  // shiftRanges is an array of all the ranges representing a single shift in A1 notation.
+  var shiftRanges = getAllShiftRanges();
+  Logger.log(shiftRanges);
+  var assignedShifts = new Object();
+  for (var i = 0; i < shiftRanges.length; i++) {
+    // tutorsInRange is an array of the names of the tutors that exist in the given range. 
+    var tutorsInRange = getTutorsOnSchedule(shiftRanges[i].range);
+    // if the tutorName is in the given range, then include the shift's day and time in the results.
+    if (tutorsInRange.indexOf(tutorName) !== -1) {
+      var currentDay = shiftRanges[i].day;
+      var currentShift = shiftRanges[i].time;
+      if (assignedShifts[currentDay] === undefined) {
+        assignedShifts[currentDay] = [];
+      }
+      // ex) assignedShifts.sunday = [9-10, 10-11, etc.]
+      assignedShifts[currentDay].push(currentShift);
+    }
+  }
+  return assignedShifts;
 }
