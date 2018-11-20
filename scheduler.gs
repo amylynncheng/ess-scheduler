@@ -24,6 +24,7 @@ function onOpen() {
     .createMenu('Custom Menu')
     .addItem('Create schedule', 'main')
     .addItem('Show sidebar', 'showSidebar')
+    .addItem('Send emails', 'showPrompt')
     .addToUi();
 }
 
@@ -35,6 +36,37 @@ function showSidebar() {
       .evaluate()
       .setTitle('Scheduling Sidebar');
   SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * Opens a user prompt that accepts the name of a tutor to email.
+ */
+function showPrompt() {
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.prompt(
+      'Please input the name of the tutor you want to email',
+      ui.ButtonSet.OK_CANCEL);
+  // Process the user's response.
+  var button = result.getSelectedButton();
+  var name = result.getResponseText().trim();
+  if (button == ui.Button.OK) {
+    sendEmailTo(name);
+  }
+}
+
+/**
+ * Sends an email to the tutor that matches the given name with 
+ * the shifts that he/she is scheduled to work.
+ */
+function sendEmailTo(name) {
+  tutors = fetchSurveyData();
+  var tutor = tutors.filter(function(tutor) {
+    return tutor.name === name;
+  });
+  Logger.log(tutors);
+  GmailApp.sendEmail(tutor.email, 
+    "ESS Tutoring: Shifts for " + tutor.name,
+     "Test.");
 }
 
 /**
