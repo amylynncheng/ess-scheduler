@@ -63,11 +63,30 @@ function sendEmailTo(name) {
   var tutor = tutors.filter(function(tutor) {
     return tutor.name === name;
   })[0];
-  Logger.log(tutor);
-  Logger.log(tutor.email);
-  GmailApp.sendEmail(tutor.email, 
-    "ESS Tutoring: Shifts for " + tutor.name,
-     "Test.");
+  var assignedShifts = getAssignedShifts(name, "Final Schedule");
+  var body = constructBodyFromShiftData_(assignedShifts);
+  GmailApp.sendEmail(tutor.email, "ESS Tutoring: Shifts for " + tutor.name, body); 
+}
+
+function constructBodyFromShiftData_(assignedShifts) {
+  var result = 'Listed below are the shifts you are scheduled to work for the upcoming semester:\n';
+  daysOfTheWeek.forEach(function(day) {
+    if (assignedShifts[day] !== undefined) {
+      result += day.charAt(0).toUpperCase() + day.slice(1) + ': '
+             + arrayToString(assignedShifts[day])
+             + '\n';
+    }
+  })
+  return result;
+}
+
+function arrayToString(array) {
+  var string = '';
+  for (var i = 0; i < array.length; i++) {
+    string += array[i];
+    if (i !== array.length-1) string += ", ";
+  }
+  return string;
 }
 
 /**
@@ -471,7 +490,6 @@ function getAssignedShifts(tutorName, sheetName) {
   var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
   // shiftRanges is an array of all the ranges representing a single shift in A1 notation.
   var shiftRanges = getAllShiftRanges();
-  Logger.log(shiftRanges);
   var assignedShifts = new Object();
   for (var i = 0; i < shiftRanges.length; i++) {
     // tutorsInRange is an array of the names of the tutors that exist in the given range. 
