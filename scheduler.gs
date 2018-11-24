@@ -136,148 +136,6 @@ function getGivenHours(tutor) {
   return hours;
 }
 
-//-------------------------- Email notifications --------------------------
-/**
- * Sends an email to the tutor that matches the given name with 
- * the shifts that he/she is scheduled to work.
- */
-function sendEmailTo(name) {
-  fetchSurveyData();
-  var tutor = tutors.filter(function(tutor) {
-    return tutor.name === name;
-  })[0];
-  var assignedShifts = getAssignedShifts(name, "Final Schedule");
-  var body = constructBodyFromShiftData_(assignedShifts);
-  GmailApp.sendEmail(tutor.email, "ESS Tutoring: Shifts for " + tutor.name, body); 
-}
-
-function constructBodyFromShiftData_(assignedShifts) {
-  var result = 'Listed below are the shifts you are scheduled to work for the upcoming semester:\n';
-  daysOfTheWeek.forEach(function(day) {
-    if (assignedShifts[day] !== undefined) {
-      result += day.charAt(0).toUpperCase() + day.slice(1) + ': '
-             + arrayToString(assignedShifts[day])
-             + '\n';
-    }
-  })
-  return result;
-}
-
-/**
- * Returns an object with properties equal to the days of the week.
- * Each property is an array containing a string representing the shift time
- * that the tutor is assigned to work (aka where the tutors name is written on the given sheet name).
- * ex.) assignedShifts = {sunday: ['9-10', '10-11'], monday: ['3-4'], ...}
- */
-function getAssignedShifts(tutorName, sheetName) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
-  // shiftRanges is an array of all the ranges representing a single shift in A1 notation.
-  var shiftRanges = getAllShiftRanges();
-  var assignedShifts = new Object();
-  for (var i = 0; i < shiftRanges.length; i++) {
-    // tutorsInRange is an array of the names of the tutors that exist in the given range. 
-    var tutorsInRange = getTutorsOnSchedule(shiftRanges[i].range);
-    // if the tutorName is in the given range, then include the shift's day and time in the results.
-    if (tutorsInRange.indexOf(tutorName) !== -1) {
-      var currentDay = shiftRanges[i].day;
-      var currentShift = shiftRanges[i].time;
-      if (assignedShifts[currentDay] === undefined) {
-        assignedShifts[currentDay] = [];
-      }
-      // ex) assignedShifts.sunday = [9-10, 10-11, etc.]
-      assignedShifts[currentDay].push(currentShift);
-    }
-  }
-  return assignedShifts;
-}
-
-//-------------------------- Waitlisting --------------------------
-/**
- * Returns the names of the tutors that are waitlisted for the shift currently
- * being highlighted by the user.
- */
-function findWaitlistForHighlight() {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
-  var range = SpreadsheetApp.getActive().getActiveRange().getA1Notation();
-  fetchSurveyData();
-  var allShiftRanges = getAllShiftRanges();
-  // check if selected range fits the valid ranges of shifts.
-  var isValidRange = validateRange(range, allShiftRanges);
-  if (isValidRange) {
-    // return list of tutors that are waitlisted for the selected range.
-    var day = getDayFromRange(range);
-    var shift = getShiftFromRange(range);
-    var waitlist = getWaitlistedTutors(range, day, shift);
-    var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
-    return waitlistNames;
-  } else {
-    throw new Error('Invalid range selected.');
-  }
-}
-
-/**
- * Returns the names of the tutors that are waitlisted for the shift 
- * specified by the sidebar dropdowns.
- */
-function findWaitlistForSelection(day, shift) {
-  day = day.toLowerCase();
-  if (true) {
-    // return list of tutors that are waitlisted for the selected range.
-    var waitlist = getWaitlistedTutors(range, day, shift);
-    var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
-    return waitlistNames;
-  } else {
-    throw new Error('Invalid values ' + day + ', ' + shift + ' selected.');
-  }
-}
-
-/**
- * Given a range in A1 notation, return whether it is within the bounds
- * of a shift on the schedule.
- */
-function validateRange(range, allValidRanges) {
-  for (var i = 0; i < allValidRanges.length; i++) {
-    if (range === allValidRanges[i]) return true;
-    // TODO: add check if in non active shift    
-  }
-  return false;
-}
-
-function getDayFromRange(range) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
-  var column = sheet.getRange(range).getColumn();
-  return sheet.getRange(1, column).getValue().toLowerCase();
-}
-
-function getShiftFromRange(range) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
-  var row = sheet.getRange(range).getRow();
-  return sheet.getRange(row, 1).getValue();
-}
-
-function getWaitlistedTutors(range, day, shift) {
-  var currentTutors = getTutorsOnSchedule(range);
-  var waitlist = tutors.filter(function(tutor) {
-    var notOnShift = currentTutors.indexOf(tutor.name) === -1;
-    var canWorkShift = tutor.shifts[day].indexOf(shift) >= 0;
-    return (notOnShift && canWorkShift);
-  });
-  return waitlist;
-}
-
-function getTutorsOnSchedule(range) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
-  // getValues returns a 2d array, indexed by row then column
-  var onSchedule = sheet.getRange(range).getValues();
-  // flatten result into a single 1d array for simpler iteration
-  var currentTutors = [].concat.apply([], onSchedule);
-  // remove all empty data points
-  currentTutors = currentTutors.filter(function(tutor) {
-    return tutor !== '';
-  });
-  return currentTutors;
-}
-
 //--------------------------- Schedule automation and display --------------------------
 function generateSchedule() {
   var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
@@ -413,6 +271,149 @@ function writeToSchedule(tutorsPerShift, column, row) {
     cell = sheet.getRange(column+row);
   }
 }
+
+//-------------------------- Waitlisting --------------------------
+/**
+ * Returns the names of the tutors that are waitlisted for the shift currently
+ * being highlighted by the user.
+ */
+function findWaitlistForHighlight() {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var range = SpreadsheetApp.getActive().getActiveRange().getA1Notation();
+  fetchSurveyData();
+  var allShiftRanges = getAllShiftRanges();
+  // check if selected range fits the valid ranges of shifts.
+  var isValidRange = validateRange(range, allShiftRanges);
+  if (isValidRange) {
+    // return list of tutors that are waitlisted for the selected range.
+    var day = getDayFromRange(range);
+    var shift = getShiftFromRange(range);
+    var waitlist = getWaitlistedTutors(range, day, shift);
+    var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
+    return waitlistNames;
+  } else {
+    throw new Error('Invalid range selected.');
+  }
+}
+
+/**
+ * Returns the names of the tutors that are waitlisted for the shift 
+ * specified by the sidebar dropdowns.
+ */
+function findWaitlistForSelection(day, shift) {
+  day = day.toLowerCase();
+  if (true) {
+    // return list of tutors that are waitlisted for the selected range.
+    var waitlist = getWaitlistedTutors(range, day, shift);
+    var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
+    return waitlistNames;
+  } else {
+    throw new Error('Invalid values ' + day + ', ' + shift + ' selected.');
+  }
+}
+
+/**
+ * Given a range in A1 notation, return whether it is within the bounds
+ * of a shift on the schedule.
+ */
+function validateRange(range, allValidRanges) {
+  for (var i = 0; i < allValidRanges.length; i++) {
+    if (range === allValidRanges[i]) return true;
+    // TODO: add check if in non active shift    
+  }
+  return false;
+}
+
+function getDayFromRange(range) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var column = sheet.getRange(range).getColumn();
+  return sheet.getRange(1, column).getValue().toLowerCase();
+}
+
+function getShiftFromRange(range) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var row = sheet.getRange(range).getRow();
+  return sheet.getRange(row, 1).getValue();
+}
+
+function getWaitlistedTutors(range, day, shift) {
+  var currentTutors = getTutorsOnSchedule(range);
+  var waitlist = tutors.filter(function(tutor) {
+    var notOnShift = currentTutors.indexOf(tutor.name) === -1;
+    var canWorkShift = tutor.shifts[day].indexOf(shift) >= 0;
+    return (notOnShift && canWorkShift);
+  });
+  return waitlist;
+}
+
+function getTutorsOnSchedule(range) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  // getValues returns a 2d array, indexed by row then column
+  var onSchedule = sheet.getRange(range).getValues();
+  // flatten result into a single 1d array for simpler iteration
+  var currentTutors = [].concat.apply([], onSchedule);
+  // remove all empty data points
+  currentTutors = currentTutors.filter(function(tutor) {
+    return tutor !== '';
+  });
+  return currentTutors;
+}
+
+//-------------------------- Email notifications --------------------------
+/**
+ * Sends an email to the tutor that matches the given name with 
+ * the shifts that he/she is scheduled to work.
+ */
+function sendEmailTo(name) {
+  fetchSurveyData();
+  var tutor = tutors.filter(function(tutor) {
+    return tutor.name === name;
+  })[0];
+  var assignedShifts = getAssignedShifts(name, "Final Schedule");
+  var body = constructBodyFromShiftData_(assignedShifts);
+  GmailApp.sendEmail(tutor.email, "ESS Tutoring: Shifts for " + tutor.name, body); 
+}
+
+function constructBodyFromShiftData_(assignedShifts) {
+  var result = 'Listed below are the shifts you are scheduled to work for the upcoming semester:\n';
+  daysOfTheWeek.forEach(function(day) {
+    if (assignedShifts[day] !== undefined) {
+      result += day.charAt(0).toUpperCase() + day.slice(1) + ': '
+             + arrayToString(assignedShifts[day])
+             + '\n';
+    }
+  })
+  return result;
+}
+
+/**
+ * Returns an object with properties equal to the days of the week.
+ * Each property is an array containing a string representing the shift time
+ * that the tutor is assigned to work (aka where the tutors name is written on the given sheet name).
+ * ex.) assignedShifts = {sunday: ['9-10', '10-11'], monday: ['3-4'], ...}
+ */
+function getAssignedShifts(tutorName, sheetName) {
+  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  // shiftRanges is an array of all the ranges representing a single shift in A1 notation.
+  var shiftRanges = getAllShiftRanges();
+  var assignedShifts = new Object();
+  for (var i = 0; i < shiftRanges.length; i++) {
+    // tutorsInRange is an array of the names of the tutors that exist in the given range. 
+    var tutorsInRange = getTutorsOnSchedule(shiftRanges[i].range);
+    // if the tutorName is in the given range, then include the shift's day and time in the results.
+    if (tutorsInRange.indexOf(tutorName) !== -1) {
+      var currentDay = shiftRanges[i].day;
+      var currentShift = shiftRanges[i].time;
+      if (assignedShifts[currentDay] === undefined) {
+        assignedShifts[currentDay] = [];
+      }
+      // ex) assignedShifts.sunday = [9-10, 10-11, etc.]
+      assignedShifts[currentDay].push(currentShift);
+    }
+  }
+  return assignedShifts;
+}
+
 //-------------------------- General-purpose / Formatting --------------------------
 function arrayToString(array) {
   var string = '';
