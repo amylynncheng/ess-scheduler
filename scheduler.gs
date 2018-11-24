@@ -183,6 +183,7 @@ function writeBlankSchedule(sheetName) {
   ALL_SHIFTS.forEach(function(shift) {
     sheet.getRange(leftColumn+shiftRow)
       .setValue(shift)
+      .setNumberFormat('@STRING@') // to avoid reading shift hours as dates
       .setFontWeight('bold')
       .setHorizontalAlignment('right');
     shiftRow += MAX_TUTORS;  
@@ -300,11 +301,15 @@ function findWaitlistForHighlight() {
  * Returns the names of the tutors that are waitlisted for the shift 
  * specified by the sidebar dropdowns.
  */
-function findWaitlistForSelection(day, shift) {
-  day = day.toLowerCase();
+function findWaitlistForSelection(day, time) {
+  var allShiftBlocks = getAllShiftRanges();
+  // find the range of the shift that matches the given day and time.
+  var range = allShiftBlocks.filter(function(shiftBlock) {
+    return shiftBlock.day === day && shiftBlock.time === time;
+  })[0].range;
   if (true) {
-    // return list of tutors that are waitlisted for the selected range.
-    var waitlist = getWaitlistedTutors(range, day, shift);
+    // return list of tutors that are waitlisted for the selected day and shift.
+    var waitlist = getWaitlistedTutors(range, day, time);
     var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
     return waitlistNames;
   } else {
@@ -318,8 +323,8 @@ function findWaitlistForSelection(day, shift) {
  */
 function validateRange(range, allValidRanges) {
   for (var i = 0; i < allValidRanges.length; i++) {
-    if (range === allValidRanges[i]) return true;
-    // TODO: add check if in non active shift    
+    if (range === allValidRanges[i].range) return true;
+    // TODO: add check if in non active shift
   }
   return false;
 }
@@ -425,8 +430,11 @@ function arrayToString(array) {
 }
 
 /**
- * Returns an array containing ranges in A1 format, each of which represent 
- * a shift block for the given schedule.
+ * Returns an array containing objects that represent a single shift block;
+ * Each shift block has the following properties: 
+ * - range: ranges in A1 format ('B2:B5')
+ * - day: day of the given shift block ('sunday')
+ * - time: hours of the given shift block ('9-10')
  */
 function getAllShiftRanges() {
   var allShiftRanges = [];
