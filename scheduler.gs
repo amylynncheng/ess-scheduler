@@ -4,7 +4,7 @@ var SURVEY_NAME = 'Form Responses 1';
 var SCHEDULE_SHEET = 'New Schedule';
 
 // Schedule properties
-var daysOfTheWeek = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
+var DAYS_OF_THE_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
 // names of the columns that represent a day of the week.
 var ALL_SHIFTS = ['9-10','10-11','11-12','12-1','1-2','2-3','3-4','4-5','5-6','6-7','7-8','8-9'];
 var MAX_TUTORS = 4; 
@@ -125,8 +125,8 @@ function fetchSurveyData() {
  */
 function getGivenHours(tutor) {
   var hours = 0;  
-  for (var day = 0; day < daysOfTheWeek.length; day++) {
-    var shiftsPerDay = tutor.shifts[daysOfTheWeek[day]];
+  for (var day = 0; day < DAYS_OF_THE_WEEK.length; day++) {
+    var shiftsPerDay = tutor.shifts[DAYS_OF_THE_WEEK[day]];
     if (shiftsPerDay[0] === '') { // tutor does not work this day
       continue;
     }
@@ -138,6 +138,7 @@ function getGivenHours(tutor) {
 
 //--------------------------- Schedule automation and display --------------------------
 function generateSchedule() {
+  produceScheduleFor("Amy Cheng");
   var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   try {
     spreadsheet.setActiveSheet(spreadsheet.getSheetByName(SCHEDULE_SHEET));
@@ -149,8 +150,8 @@ function generateSchedule() {
   fetchSurveyData();
   tutors = sortByGivenHours_(tutors);
   // construct schedule
-  for (var i = 0; i < daysOfTheWeek.length; i++) {
-    var currentDayTutors = createSchedule(tutors, daysOfTheWeek[i]);
+  for (var i = 0; i < DAYS_OF_THE_WEEK.length; i++) {
+    var currentDayTutors = createSchedule(tutors, DAYS_OF_THE_WEEK[i]);
     var shiftRow = STARTING_ROW;
     for (var j = 0; j < currentDayTutors.length; j++) {
       var dayColumn = columns[i];
@@ -381,7 +382,7 @@ function sendEmailTo(name) {
 
 function constructBodyFromShiftData_(assignedShifts) {
   var result = 'Listed below are the shifts you are scheduled to work for the upcoming semester:\n';
-  daysOfTheWeek.forEach(function(day) {
+  DAYS_OF_THE_WEEK.forEach(function(day) {
     if (assignedShifts[day] !== undefined) {
       result += day.charAt(0).toUpperCase() + day.slice(1) + ': '
              + arrayToString(assignedShifts[day])
@@ -438,14 +439,14 @@ function arrayToString(array) {
  */
 function getAllShiftRanges() {
   var allShiftRanges = [];
-  for (var i = 0; i < daysOfTheWeek.length; i++) {
+  for (var i = 0; i < DAYS_OF_THE_WEEK.length; i++) {
     var column = columns[i];
     var startRow = STARTING_ROW;
     var endRow = startRow + MAX_TUTORS-1; // subtract one because the group of cells is inclusive
     for (var j = 0; j < ALL_SHIFTS.length; j++) {
       var shift = new Object();
       shift.range = column+startRow + ':' + column+endRow;
-      shift.day = daysOfTheWeek[i];
+      shift.day = DAYS_OF_THE_WEEK[i];
       shift.time = ALL_SHIFTS[j];
       // store the range of the current shift block
       allShiftRanges.push(shift);
@@ -486,9 +487,9 @@ function getHours_(hoursPerDay) {
   var shifts = new Object();
   for (var day = 0; day < hoursPerDay.length; day++) {
     if (!hoursPerDay[day]) { // tutor does not work this day.
-      shifts[daysOfTheWeek[day]] = [];
+      shifts[DAYS_OF_THE_WEEK[day]] = [];
     } else {
-      shifts[daysOfTheWeek[day]] = formatHours_(hoursPerDay[day]);
+      shifts[DAYS_OF_THE_WEEK[day]] = formatHours_(hoursPerDay[day]);
     }
   }
   return shifts;
@@ -531,4 +532,37 @@ function sortByLastName_(tutors) {
     return 0;
   });
   return tutors;
+}
+
+/**
+ * Given a tutor's name, creates a new sheet in the "Individual Schedules"
+ * Spreadsheet titled "(tutorName) Tutoring Schedule."
+ * 
+ * @return {Sheet} the newly created Spreadsheet.
+ */
+function addIndividualSpreadsheet(tutorName) {
+  var folder = DriveApp.getFoldersByName("Individual Schedules").next();
+  // check if the spreadsheet for this tutor already exists
+  var ssName = "(" + tutorName + ") Tutoring Schedule";
+  var iterator = folder.getFilesByName(ssName);
+  while (iterator.hasNext()) { // already exists
+    return iterator.next();
+  }
+  // does not already exist, so create a new spreadsheet.
+  var newSS = SpreadsheetApp.create(ssName);
+  var temp = DriveApp.getFileById(newSS.getId());
+  folder.addFile(temp)
+  DriveApp.getRootFolder().removeFile(temp);
+  return newSS;
+}
+
+/**
+ * Creates a sheet in a separate spreadsheet that is a copy of the generated schedule
+ * with only tutorName highlighted.
+ * 
+ * @return {Sheet} the newly created sheet containing tutorName's schedule.
+ */
+function produceScheduleFor(tutorName) {
+  var ss = addIndividualSpreadsheet(tutorName);
+  
 }
