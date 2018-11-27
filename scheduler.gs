@@ -1,7 +1,8 @@
 //-------------------------- CONSTANTS --------------------------
 // Names
-var SURVEY_NAME = 'Form Responses 1';
+var SURVEY_SHEET = 'Form Responses 1';
 var SCHEDULE_SHEET = 'New Schedule';
+var INDIVIDUAL_SCHEDULE = 'Your Tutoring Schedule';
 
 // Schedule properties
 var DAYS_OF_THE_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
@@ -79,7 +80,7 @@ function doGet() {
  */
 function fetchSurveyData() {
   tutors = []; // reset data
-  const survey = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SURVEY_NAME);
+  const survey = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SURVEY_SHEET);
   const lastRow = survey.getLastRow();
   const infoRange = survey.getRange('A2:F' + lastRow);
   const basicInfo = infoRange.getValues();
@@ -138,7 +139,6 @@ function getGivenHours(tutor) {
 
 //--------------------------- Schedule automation and display --------------------------
 function generateSchedule() {
-  produceScheduleFor("Amy Cheng");
   var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
   try {
     spreadsheet.setActiveSheet(spreadsheet.getSheetByName(SCHEDULE_SHEET));
@@ -546,7 +546,8 @@ function addIndividualSpreadsheet(tutorName) {
   var ssName = "(" + tutorName + ") Tutoring Schedule";
   var iterator = folder.getFilesByName(ssName);
   while (iterator.hasNext()) { // already exists
-    return iterator.next();
+    var oldSS = SpreadsheetApp.open(iterator.next());
+    return oldSS;
   }
   // does not already exist, so create a new spreadsheet.
   var newSS = SpreadsheetApp.create(ssName);
@@ -557,12 +558,35 @@ function addIndividualSpreadsheet(tutorName) {
 }
 
 /**
- * Creates a sheet in a separate spreadsheet that is a copy of the generated schedule
+ * Creates a sheet in a separate spreadsheet that is a copy of the given schedule
  * with only tutorName highlighted.
  * 
+ * @param {string} the name of the tutor the individual schedule is intended for.
+ * @param {Sheet} the schedule we want to base the individual copy on.
  * @return {Sheet} the newly created sheet containing tutorName's schedule.
  */
-function produceScheduleFor(tutorName) {
+function produceScheduleFor(tutorName, schedule) {
   var ss = addIndividualSpreadsheet(tutorName);
+  var copy = schedule.copyTo(ss);
+  // rename the duplicated schedule sheet (must delete first if already exists).
+  if (ss.getSheetByName(INDIVIDUAL_SCHEDULE) !== undefined) {
+    ss.deleteSheet(ss.getSheetByName(INDIVIDUAL_SCHEDULE));
+  }
+  copy.setName(INDIVIDUAL_SCHEDULE);
+  // delete all other existing sheets.
+  ss.getSheets().forEach(function(sheet) {
+    if (sheet.getName() !== INDIVIDUAL_SCHEDULE) {
+      ss.deleteSheet(sheet);
+    }
+  });
+  highlightSchedule(tutorName, copy);
+  return copy;
+}
+
+/**
+ * Given a tutor's name and a Sheet representing a schedule, modifies the given
+ * Sheet so all occurances of the tutor's name is highlighted.
+ */
+function highlightSchedule(tutorName, sheet) {
   
 }
