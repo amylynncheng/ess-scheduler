@@ -588,5 +588,19 @@ function produceScheduleFor(tutorName, schedule) {
  * Sheet so all occurances of the tutor's name is highlighted.
  */
 function highlightSchedule(tutorName, sheet) {
-  
+  var shiftBlocks = getAllShiftRanges();
+  // TODO: minimize calls to sheet.getRange() -- expensive.
+  for (var row = STARTING_ROW; row < sheet.getLastRow(); row++) {
+    columns.forEach(function(column) {
+      var cell = sheet.getRange(column+row);
+      if (cell.getValue() === tutorName) {
+        cell.setBackground('#ffff7f').setFontWeight('bold');
+      }
+    })
+  }
+}
+
+function test() {
+  var schedule = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Final Schedule");
+  var individualSchedule = produceScheduleFor("Amy Cheng", schedule);
 }
