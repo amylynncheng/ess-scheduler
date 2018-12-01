@@ -18,15 +18,21 @@ var nonActiveShifts = ['B2:B25','B42:B49','G22:G49'];
 var tutors = [];
 
 // Spreadsheet properties
-var spreadsheetId = '1E82wrm8FP9MftoKQkWQAK7ecz9LhoJdSSS2OiPzisGc';
 var columns = ['B','C','D','E','F','G'];
 var STARTING_ROW = 2;
 
 //-------------------------- UI-related --------------------------
 /**
+ * Triggered when the user first installs the add-on; populates add-on menu.
+ */
+function onInstall(e) {
+  onOpen(e);
+}
+
+/**
  * Creates a menu entry in the Google Sheets UI when the document is opened.
  */
-function onOpen() {
+function onOpen(e) {
   SpreadsheetApp.getUi()
     .createMenu('Schedule Helper')
     .addItem('Generate schedule', 'generateSchedule')
@@ -80,11 +86,11 @@ function doGet() {
  */
 function fetchSurveyData() {
   tutors = []; // reset data
-  const survey = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SURVEY_SHEET);
+  const survey = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SURVEY_SHEET);
   const lastRow = survey.getLastRow();
   const infoRange = survey.getRange('A2:F' + lastRow);
   const basicInfo = infoRange.getValues();
-  const timeRange = survey.getRange('G2:P' + lastRow);
+  const timeRange = survey.getRange('I2:R' + lastRow);
   const hoursInfo = timeRange.getValues();
   if (!basicInfo) {
     Logger.log('No data found.');
@@ -139,12 +145,13 @@ function getGivenHours(tutor) {
 
 //--------------------------- Schedule automation and display --------------------------
 function generateSchedule() {
-  var spreadsheet = SpreadsheetApp.openById(spreadsheetId);
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   try {
     spreadsheet.setActiveSheet(spreadsheet.getSheetByName(SCHEDULE_SHEET));
   } catch(e) {
     // insert after form responses
     spreadsheet.insertSheet(SCHEDULE_SHEET, 1);
+    spreadsheet.setActiveSheet(spreadsheet.getSheetByName(SCHEDULE_SHEET));
   }
   writeBlankSchedule(SCHEDULE_SHEET);
   fetchSurveyData();
@@ -172,7 +179,7 @@ function generateSchedule() {
  * an empty grid. Also populates the array for all shift ranges.
  */
 function writeBlankSchedule(sheetName) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   sheet.clear();
   // top row
   sheet.getRange('B1:G1')
@@ -202,7 +209,7 @@ function writeBlankSchedule(sheetName) {
  * and the number of [type = given or assigned] hours.
  */
 function listNumberOfHours(type, tutors, scheduleName, nameCol, hourCol) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(scheduleName);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(scheduleName);
   var row = STARTING_ROW;
   var nameCell = sheet.getRange(nameCol+row);
   var hourCell = sheet.getRange(hourCol+row);
@@ -217,7 +224,7 @@ function listNumberOfHours(type, tutors, scheduleName, nameCol, hourCol) {
 }
 
 function clearNonActiveShifts() {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET);
   nonActiveShifts.forEach(function(range) {
     // block out shift on sheet
     sheet.getRange(range).clear().setBackground('#D3D3D3');
@@ -253,7 +260,7 @@ function createSchedule(tutors, dayOfWeek) {
  * of the tutors that work during that shift.
  */
 function writeToSchedule(tutorsPerShift, column, row) { 
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET);
   var cell = sheet.getRange(column+row);
   for (var count = 0; count < MAX_TUTORS; count++) {
     if (!tutorsPerShift[count]) {
@@ -280,7 +287,7 @@ function writeToSchedule(tutorsPerShift, column, row) {
  * being highlighted by the user.
  */
 function findWaitlistForHighlight() {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET);
   var range = SpreadsheetApp.getActive().getActiveRange().getA1Notation();
   fetchSurveyData();
   var allShiftRanges = getAllShiftRanges();
@@ -331,13 +338,13 @@ function validateRange(range, allValidRanges) {
 }
 
 function getDayFromRange(range) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET);
   var column = sheet.getRange(range).getColumn();
   return sheet.getRange(1, column).getValue().toLowerCase();
 }
 
 function getShiftFromRange(range) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET);
   var row = sheet.getRange(range).getRow();
   return sheet.getRange(row, 1).getValue();
 }
@@ -353,7 +360,7 @@ function getWaitlistedTutors(range, day, shift) {
 }
 
 function getTutorsOnSchedule(range) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(SCHEDULE_SHEET);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SCHEDULE_SHEET);
   // getValues returns a 2d array, indexed by row then column
   var onSchedule = sheet.getRange(range).getValues();
   // flatten result into a single 1d array for simpler iteration
@@ -399,7 +406,7 @@ function constructBodyFromShiftData_(assignedShifts) {
  * ex.) assignedShifts = {sunday: ['9-10', '10-11'], monday: ['3-4'], ...}
  */
 function getAssignedShifts(tutorName, sheetName) {
-  var sheet = SpreadsheetApp.openById(spreadsheetId).getSheetByName(sheetName);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
   // shiftRanges is an array of all the ranges representing a single shift in A1 notation.
   var shiftRanges = getAllShiftRanges();
   var assignedShifts = new Object();
