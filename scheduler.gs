@@ -378,16 +378,19 @@ function getTutorsOnSchedule(range) {
  * the shifts that he/she is scheduled to work.
  */
 function sendEmailTo(name) {
+  // TODO: allow user to specify sheet name.
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Final Schedule");
   fetchSurveyData();
   var tutor = tutors.filter(function(tutor) {
     return tutor.name === name;
   })[0];
-  var assignedShifts = getAssignedShifts(name, "Final Schedule");
-  var body = constructBodyFromShiftData_(assignedShifts);
-  GmailApp.sendEmail(tutor.email, "ESS Tutoring: Shifts for " + tutor.name, body); 
+  var assignedShifts = getAssignedShifts(name, sheet);
+  var schedule = produceScheduleFor(name, sheet);
+  var body = constructBodyFromShiftData_(assignedShifts, schedule);
+  GmailApp.sendEmail(tutor.email, "ESS Tutoring: Shifts for " + name, body); 
 }
 
-function constructBodyFromShiftData_(assignedShifts) {
+function constructBodyFromShiftData_(assignedShifts, schedule) {
   var result = 'Listed below are the shifts you are scheduled to work for the upcoming semester:\n';
   DAYS_OF_THE_WEEK.forEach(function(day) {
     if (assignedShifts[day] !== undefined) {
@@ -395,7 +398,8 @@ function constructBodyFromShiftData_(assignedShifts) {
              + arrayToString(assignedShifts[day])
              + '\n';
     }
-  })
+  });
+  result += "\n\nView your schedule here: " + getSheetUrl(schedule);
   return result;
 }
 
@@ -405,8 +409,7 @@ function constructBodyFromShiftData_(assignedShifts) {
  * that the tutor is assigned to work (aka where the tutors name is written on the given sheet name).
  * ex.) assignedShifts = {sunday: ['9-10', '10-11'], monday: ['3-4'], ...}
  */
-function getAssignedShifts(tutorName, sheetName) {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
+function getAssignedShifts(tutorName, sheet) {
   // shiftRanges is an array of all the ranges representing a single shift in A1 notation.
   var shiftRanges = getAllShiftRanges();
   var assignedShifts = new Object();
@@ -425,6 +428,94 @@ function getAssignedShifts(tutorName, sheetName) {
     }
   }
   return assignedShifts;
+}
+
+/**
+ * Creates a sheet in a separate spreadsheet that is a copy of the given schedule
+ * with only tutorName highlighted.
+ * 
+ * @param {string} the name of the tutor the individual schedule is intended for.
+ * @param {string} the name of schedule we want to base the individual copy on.
+ * @return {Sheet} the newly created sheet containing tutorName's schedule.
+ */
+function produceScheduleFor(tutorName, schedule) {
+  var ss = addIndividualSpreadsheet(tutorName);
+  var copy = schedule.copyTo(ss);
+  // rename the duplicated schedule sheet (must delete first if already exists).
+  if (ss.getSheetByName(INDIVIDUAL_SCHEDULE) !== undefined) {
+    ss.deleteSheet(ss.getSheetByName(INDIVIDUAL_SCHEDULE));
+  }
+  copy.setName(INDIVIDUAL_SCHEDULE);
+  // delete all other existing sheets.
+  ss.getSheets().forEach(function(sheet) {
+    if (sheet.getName() !== INDIVIDUAL_SCHEDULE) {
+      ss.deleteSheet(sheet);
+    }
+  });
+  highlightSchedule(tutorName, copy);
+  // remove all non-schedule data (such as list of assigned hours)
+  clearNonScheduleData(copy);
+  return copy;
+}
+
+function test() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Final Schedule");
+  produceScheduleFor("Amy Cheng",sheet);
+}
+
+/**
+ * Given a tutor's name, creates a new sheet in the "Individual Schedules"
+ * Spreadsheet titled "(tutorName) Tutoring Schedule."
+ * Allows anyone with a link to view the newly created file.
+ * 
+ * @return {Sheet} the newly created Spreadsheet.
+ */
+function addIndividualSpreadsheet(tutorName) {
+  var folder = DriveApp.getFoldersByName("Individual Schedules").next();
+  // check if the spreadsheet for this tutor already exists
+  var ssName = "(" + tutorName + ") Tutoring Schedule";
+  var iterator = folder.getFilesByName(ssName);
+  while (iterator.hasNext()) { // already exists
+    var oldSS = SpreadsheetApp.open(iterator.next());
+    return oldSS;
+  }
+  // does not already exist, so create a new spreadsheet.
+  var newSS = SpreadsheetApp.create(ssName);
+  // work-around for moving a new file to a specific folder.
+  var temp = DriveApp.getFileById(newSS.getId());
+  folder.addFile(temp);
+  DriveApp.getRootFolder().removeFile(temp);
+  return newSS;
+}
+
+/**
+ * Given a tutor's name and a Sheet representing a schedule, modifies the given
+ * Sheet so all occurances of the tutor's name is highlighted.
+ */
+function highlightSchedule(tutorName, sheet) {
+  var shiftBlocks = getAllShiftRanges();
+  // TODO: minimize calls to sheet.getRange() -- expensive.
+  for (var row = STARTING_ROW; row < sheet.getLastRow(); row++) {
+    columns.forEach(function(column) {
+      var cell = sheet.getRange(column+row);
+      if (cell.getValue() === tutorName) {
+        cell.setBackground('#ffff7f').setFontWeight('bold');
+      }
+    });
+  }
+}
+
+/**
+ * Clears all ranges that contain content outside of the written schedule.
+ */
+function clearNonScheduleData(sheet) {
+  var nonScheduleCol = String.fromCharCode(columns[columns.length-1].charCodeAt() + 1);
+  var nonScheduleRow = (ALL_SHIFTS.length+1) * MAX_TUTORS + STARTING_ROW;
+  var lastCol = String.fromCharCode(sheet.getLastColumn() + 'A'.charCodeAt());
+  // vertical coverage (right of the schedule)
+  sheet.getRange(nonScheduleCol + 1 + ":" + lastCol + sheet.getLastRow()).clearContent();
+  // horizontal coverage (below the schedule)
+  sheet.getRange('A' + nonScheduleRow + ":" + nonScheduleCol + sheet.getLastRow()).clearContent();
 }
 
 //-------------------------- General-purpose / Formatting --------------------------
@@ -541,73 +632,6 @@ function sortByLastName_(tutors) {
   return tutors;
 }
 
-/**
- * Given a tutor's name, creates a new sheet in the "Individual Schedules"
- * Spreadsheet titled "(tutorName) Tutoring Schedule."
- * 
- * @return {Sheet} the newly created Spreadsheet.
- */
-function addIndividualSpreadsheet(tutorName) {
-  var folder = DriveApp.getFoldersByName("Individual Schedules").next();
-  // check if the spreadsheet for this tutor already exists
-  var ssName = "(" + tutorName + ") Tutoring Schedule";
-  var iterator = folder.getFilesByName(ssName);
-  while (iterator.hasNext()) { // already exists
-    var oldSS = SpreadsheetApp.open(iterator.next());
-    return oldSS;
-  }
-  // does not already exist, so create a new spreadsheet.
-  var newSS = SpreadsheetApp.create(ssName);
-  var temp = DriveApp.getFileById(newSS.getId());
-  folder.addFile(temp)
-  DriveApp.getRootFolder().removeFile(temp);
-  return newSS;
-}
-
-/**
- * Creates a sheet in a separate spreadsheet that is a copy of the given schedule
- * with only tutorName highlighted.
- * 
- * @param {string} the name of the tutor the individual schedule is intended for.
- * @param {Sheet} the schedule we want to base the individual copy on.
- * @return {Sheet} the newly created sheet containing tutorName's schedule.
- */
-function produceScheduleFor(tutorName, schedule) {
-  var ss = addIndividualSpreadsheet(tutorName);
-  var copy = schedule.copyTo(ss);
-  // rename the duplicated schedule sheet (must delete first if already exists).
-  if (ss.getSheetByName(INDIVIDUAL_SCHEDULE) !== undefined) {
-    ss.deleteSheet(ss.getSheetByName(INDIVIDUAL_SCHEDULE));
-  }
-  copy.setName(INDIVIDUAL_SCHEDULE);
-  // delete all other existing sheets.
-  ss.getSheets().forEach(function(sheet) {
-    if (sheet.getName() !== INDIVIDUAL_SCHEDULE) {
-      ss.deleteSheet(sheet);
-    }
-  });
-  highlightSchedule(tutorName, copy);
-  return copy;
-}
-
-/**
- * Given a tutor's name and a Sheet representing a schedule, modifies the given
- * Sheet so all occurances of the tutor's name is highlighted.
- */
-function highlightSchedule(tutorName, sheet) {
-  var shiftBlocks = getAllShiftRanges();
-  // TODO: minimize calls to sheet.getRange() -- expensive.
-  for (var row = STARTING_ROW; row < sheet.getLastRow(); row++) {
-    columns.forEach(function(column) {
-      var cell = sheet.getRange(column+row);
-      if (cell.getValue() === tutorName) {
-        cell.setBackground('#ffff7f').setFontWeight('bold');
-      }
-    })
-  }
-}
-
-function test() {
-  var schedule = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Final Schedule");
-  var individualSchedule = produceScheduleFor("Amy Cheng", schedule);
+function getSheetUrl(sheet) {
+  return "https://drive.google.com/file/d/"+ sheet.getParent().getId() +"/view";
 }
