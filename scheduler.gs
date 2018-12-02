@@ -493,8 +493,28 @@ function addIndividualSpreadsheet(tutorName) {
  * Sheet so all occurances of the tutor's name is highlighted.
  */
 function highlightSchedule(tutorName, sheet) {
+  // a more complicated strategy, but less expensive in terms of API calls.
   var shiftBlocks = getAllShiftRanges();
-  // TODO: minimize calls to sheet.getRange() -- expensive.
+  for (var i = 0; i < shiftBlocks.length; i++) {
+    var currentRange = shiftBlocks[i].range;
+    // getValues() returns a 2D array, where values[0] = [tutors in row]
+    var tutorsInShift = sheet.getRange(currentRange).getValues();
+    for (var j = 0; j < MAX_TUTORS; j++) {
+      // only check first element because there will only be one value per array (range is incremented by row)
+      if (tutorsInShift[j][0] === tutorName) {
+        // calcuate cell position based on loop iteration.
+        var col = currentRange.charAt(0);
+        var rangeString = JSON.stringify(currentRange);
+        var firstRowInRange = parseInt(currentRange.substring(1, currentRange.indexOf(':')));
+        var row = firstRowInRange + j;
+        var cell = sheet.getRange(col+row);
+        // mark the cell by highlighting.
+        cell.setBackground('#ffff7f').setFontWeight('bold');
+      }
+    }
+  }
+  // simpler strategy, but makes one call to getValue() per cell in the schedule.
+  /*
   for (var row = STARTING_ROW; row < sheet.getLastRow(); row++) {
     columns.forEach(function(column) {
       var cell = sheet.getRange(column+row);
@@ -503,6 +523,7 @@ function highlightSchedule(tutorName, sheet) {
       }
     });
   }
+  */
 }
 
 /**
