@@ -58,13 +58,31 @@ function showWaitlistSidebar() {
 function showEmailPrompt() {
   var ui = SpreadsheetApp.getUi();
   var result = ui.prompt(
-      'Please input the name of the tutor you want to email',
+      'Please input the name(s) of the tutor you want to email',
       ui.ButtonSet.OK_CANCEL);
   // Process the user's response.
   var button = result.getSelectedButton();
-  var name = result.getResponseText().trim();
+  var names = result.getResponseText().split(',');
+  var tutorsToEmail = [];
   if (button == ui.Button.OK) {
-    sendEmailTo(name);
+    fetchSurveyData();  // fetch data from responses once.
+    // first, run checks to ensure all names are valid.
+    names.forEach(function(name) {
+      // find tutor associated with current name.
+      var tutor = tutors.filter(function(tutor) {
+        return tutor.name === name;
+      })[0];
+      // if a given name does not match a tutor's name, then the input is invalid.
+      if (!tutor) {
+        ui.alert(name + ' is not a valid name.');
+        return;
+      }
+      tutorsToEmail.push(tutor);
+    });
+    // if the input was completely valid, send emails to all tutors specified by the user.
+    tutorsToEmail.forEach(function(tutor) {
+      sendEmailTo(tutor);
+    });
   }
 }
 
@@ -374,16 +392,11 @@ function getTutorsOnSchedule(range) {
 
 //-------------------------- Email notifications --------------------------
 /**
- * Sends an email to the tutor that matches the given name with 
- * the shifts that he/she is scheduled to work.
+ * Sends an email to the given tutor with the shifts that he/she is scheduled to work.
  */
-function sendEmailTo(name) {
+function sendEmailTo(tutor) {
   // TODO: allow user to specify sheet name.
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Final Schedule");
-  fetchSurveyData();
-  var tutor = tutors.filter(function(tutor) {
-    return tutor.name === name;
-  })[0];
   var assignedShifts = getAssignedShifts(name, sheet);
   var schedule = produceScheduleFor(name, sheet);
   var body = constructBodyFromShiftData_(assignedShifts, schedule);
@@ -456,11 +469,6 @@ function produceScheduleFor(tutorName, schedule) {
   // remove all non-schedule data (such as list of assigned hours)
   clearNonScheduleData(copy);
   return copy;
-}
-
-function test() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Final Schedule");
-  produceScheduleFor("Amy Cheng",sheet);
 }
 
 /**
