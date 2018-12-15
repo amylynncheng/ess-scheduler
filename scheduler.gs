@@ -116,7 +116,10 @@ function fetchSurveyData() {
     for (var row = 0; row < basicInfo.length; row++) {
       var tutor = new Object();
       tutor.row = row;
-      tutor.timestamp = basicInfo[row][0] // A
+      tutor.timestamp = basicInfo[row][0]; // A
+      if (tutor.timestamp === '') { // skip all empty rows.
+        continue;
+      }
       tutor.name = basicInfo[row][1]; // B
       tutor.email = basicInfo[row][2] // C
       tutor.major = basicInfo[row][3]; // D
@@ -139,6 +142,8 @@ function fetchSurveyData() {
       
       // optional: total hours tutor is willing to work
       tutor.givenHours = getGivenHours(tutor);
+      // assigned hours are 0 before the schedule is written.
+      tutor.assignedHours = 0;
       tutors.push(tutor);
     }
   }
@@ -228,6 +233,8 @@ function writeBlankSchedule(sheetName) {
  */
 function listNumberOfHours(type, tutors, scheduleName, nameCol, hourCol) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(scheduleName);
+  // set title at first row.
+  sheet.getRange(nameCol+1).setValue(type).setFontWeight('bold');
   var row = STARTING_ROW;
   var nameCell = sheet.getRange(nameCol+row);
   var hourCell = sheet.getRange(hourCol+row);
@@ -288,11 +295,7 @@ function writeToSchedule(tutorsPerShift, column, row) {
       // write the tutor's name in the shift's cell
       cell.setValue(tutor.name);
       // increment the assigned hours of the given tutor
-      if (tutor.assignedHours === undefined) {
-        tutor.assignedHours = 1;
-      } else {
-        tutor.assignedHours++;
-      }
+      tutor.assignedHours++;
     }
     row++;
     cell = sheet.getRange(column+row);
