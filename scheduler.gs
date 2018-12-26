@@ -397,10 +397,11 @@ function getTutorsOnSchedule(range) {
 function sendEmailTo(tutor) {
   // TODO: allow user to specify sheet name.
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Final Schedule");
-  var assignedShifts = getAssignedShifts(name, sheet);
-  var schedule = produceScheduleFor(name, sheet);
+  var assignedShifts = getAssignedShifts(tutor.name, sheet);
+  var schedule = produceScheduleFor(tutor.name, sheet);
   var body = constructBodyFromShiftData_(assignedShifts, schedule);
-  GmailApp.sendEmail(tutor.email, "ESS Tutoring: Shifts for " + name, body); 
+  var emailAddress = formatEmailAddress_(tutor.email);
+  GmailApp.sendEmail(emailAddress, "ESS Tutoring: Shifts for " + tutor.name, body); 
 }
 
 function constructBodyFromShiftData_(assignedShifts, schedule) {
@@ -414,6 +415,15 @@ function constructBodyFromShiftData_(assignedShifts, schedule) {
   });
   result += "\n\nView your schedule here: " + getSheetUrl(schedule);
   return result;
+}
+
+function formatEmailAddress_(email) {
+  var emailAddress = email.trim();
+  // tutor only gave the username without the domain name.
+  if (emailAddress.indexOf('@') == -1) {
+    return emailAddress.concat('@auburn.edu');
+  }
+  return emailAddress;
 }
 
 /**
