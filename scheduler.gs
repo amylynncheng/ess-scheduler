@@ -331,19 +331,16 @@ function findWaitlistForHighlight() {
  * specified by the sidebar dropdowns.
  */
 function findWaitlistForSelection(day, time) {
+  fetchSurveyData();
   var allShiftBlocks = getAllShiftRanges();
   // find the range of the shift that matches the given day and time.
   var range = allShiftBlocks.filter(function(shiftBlock) {
     return shiftBlock.day === day && shiftBlock.time === time;
   })[0].range;
-  if (true) {
-    // return list of tutors that are waitlisted for the selected day and shift.
-    var waitlist = getWaitlistedTutors(range, day, time);
-    var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
-    return waitlistNames;
-  } else {
-    throw new Error('Invalid values ' + day + ', ' + shift + ' selected.');
-  }
+  // return list of tutors that are waitlisted for the selected day and shift.
+  var waitlist = getWaitlistedTutors(range, day, time);
+  var waitlistNames = waitlist.map(function(tutor) { return tutor.name });
+  return waitlistNames;
 }
 
 /**
