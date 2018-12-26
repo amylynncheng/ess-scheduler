@@ -63,8 +63,10 @@ function showEmailPrompt() {
   // Process the user's response.
   var button = result.getSelectedButton();
   var names = result.getResponseText().split(',');
-  var tutorsToEmail = [];
+  
   if (button == ui.Button.OK) {
+    var tutorsToEmail = [];
+    var allValid = true;
     fetchSurveyData();  // fetch data from responses once.
     // first, run checks to ensure all names are valid.
     names.forEach(function(name) {
@@ -74,15 +76,34 @@ function showEmailPrompt() {
       })[0];
       // if a given name does not match a tutor's name, then the input is invalid.
       if (!tutor) {
+        allValid = false;
         ui.alert(name + ' is not a valid name.');
-        return;
+      } else {
+        tutorsToEmail.push(tutor);
       }
-      tutorsToEmail.push(tutor);
     });
-    // if the input was completely valid, send emails to all tutors specified by the user.
+    // if the input was completely valid, ask for confirmation.
+    if (allValid) {
+      showConfirmationAlert(tutorsToEmail);
+    }
+  }
+}
+
+function showConfirmationAlert(tutorsToEmail) {
+  var ui = SpreadsheetApp.getUi();
+  var result = ui.alert(
+    'Please confirm',
+    'The following tutors will be emailed with a copy of their schedule: ' + getTutorList(tutorsToEmail),
+    ui.ButtonSet.YES_NO);
+  // Process the user's response.
+  if (result == ui.Button.YES) {
+    // after confirmation, send emails to all tutors specified by the user.
     tutorsToEmail.forEach(function(tutor) {
-      sendEmailTo(tutor);
+      //sendEmailTo(tutor);
     });
+  } else {
+    // User clicked "No" or X in the title bar.
+    ui.alert('No emails were sent.');
   }
 }
 
@@ -565,6 +586,17 @@ function arrayToString(array) {
     if (i !== array.length-1) string += ", ";
   }
   return string;
+}
+
+/**
+ * Returns a bullet point list of the tutors' names.
+ */
+function getTutorList(tutors) {
+  var list = '\n';
+  tutors.forEach(function(tutor) {
+    list += '• ' + tutor.name + '\n';
+  });
+  return list;
 }
 
 /**
