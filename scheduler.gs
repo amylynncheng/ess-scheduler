@@ -59,7 +59,7 @@ function showWaitlistSidebar() {
 function showEmailPrompt() {
   var ui = SpreadsheetApp.getUi();
   var result = ui.prompt(
-      'Please input the name(s) of the tutor you want to email; separate the .\n'
+      'Please input the name(s) of the tutor you want to email; separate each name with a comma.\n'
           + 'Enter "everyone" if you would like to email all tutors who have given a response.',
       ui.ButtonSet.OK_CANCEL);
   // Process the user's response.
@@ -106,6 +106,7 @@ function showConfirmationAlert(tutorsToEmail) {
   if (result == ui.Button.YES) {
     // after confirmation, send emails to all tutors specified by the user.
     tutorsToEmail.forEach(function(tutor) {
+      // REMINDER: uncomment line below when 
       //sendEmailTo(tutor);
     });
   } else {
