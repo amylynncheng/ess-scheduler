@@ -3,6 +3,7 @@
 var SURVEY_SHEET = 'Form Responses 1';
 var SCHEDULE_SHEET = 'New Schedule';
 var INDIVIDUAL_SCHEDULE = 'Your Tutoring Schedule';
+var EMAIL_ALL = 'EVERYONE';
 
 // Schedule properties
 var DAYS_OF_THE_WEEK = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday'];
@@ -58,30 +59,36 @@ function showWaitlistSidebar() {
 function showEmailPrompt() {
   var ui = SpreadsheetApp.getUi();
   var result = ui.prompt(
-      'Please input the name(s) of the tutor you want to email',
+      'Please input the name(s) of the tutor you want to email; separate the .\n'
+          + 'Enter "everyone" if you would like to email all tutors who have given a response.',
       ui.ButtonSet.OK_CANCEL);
   // Process the user's response.
   var button = result.getSelectedButton();
   var names = result.getResponseText().split(',');
   
   if (button == ui.Button.OK) {
+    fetchSurveyData();  // fetch data from responses once.
     var tutorsToEmail = [];
     var allValid = true;
-    fetchSurveyData();  // fetch data from responses once.
-    // first, run checks to ensure all names are valid.
-    names.forEach(function(name) {
-      // find tutor associated with current name.
-      var tutor = tutors.filter(function(tutor) {
-        return tutor.name === name;
-      })[0];
-      // if a given name does not match a tutor's name, then the input is invalid.
-      if (!tutor) {
-        allValid = false;
-        ui.alert(name + ' is not a valid name.');
-      } else {
-        tutorsToEmail.push(tutor);
-      }
-    });
+    // user wants to email every tutor.
+    if (result.getResponseText().toUpperCase() === EMAIL_ALL) {
+      tutorsToEmail = tutors;
+    } else { // user specifies a list of tutors to email.
+      // first, run checks to ensure all names are valid.
+      names.forEach(function(name) {
+        // find tutor associated with current name.
+        var tutor = tutors.filter(function(tutor) {
+          return tutor.name === name;
+        })[0];
+        // if a given name does not match a tutor's name, then the input is invalid.
+        if (!tutor) {
+          allValid = false;
+          ui.alert(name + ' is not a valid name.');
+        } else {
+          tutorsToEmail.push(tutor);
+        }
+      });
+    }
     // if the input was completely valid, ask for confirmation.
     if (allValid) {
       showConfirmationAlert(tutorsToEmail);
@@ -93,7 +100,7 @@ function showConfirmationAlert(tutorsToEmail) {
   var ui = SpreadsheetApp.getUi();
   var result = ui.alert(
     'Please confirm',
-    'The following tutors will be emailed with a copy of their schedule: ' + getTutorList(tutorsToEmail),
+    'The following ' + tutorsToEmail.length + ' tutors will be emailed with a copy of their schedule: ' + getTutorList(tutorsToEmail),
     ui.ButtonSet.YES_NO);
   // Process the user's response.
   if (result == ui.Button.YES) {
@@ -102,7 +109,7 @@ function showConfirmationAlert(tutorsToEmail) {
       //sendEmailTo(tutor);
     });
   } else {
-    // User clicked "No" or X in the title bar.
+    // user clicked "No" or X in the title bar.
     ui.alert('No emails were sent.');
   }
 }
@@ -592,6 +599,7 @@ function arrayToString(array) {
  * Returns a bullet point list of the tutors' names.
  */
 function getTutorList(tutors) {
+  tutors = sortByLastName_(tutors);
   var list = '\n';
   tutors.forEach(function(tutor) {
     list += '• ' + tutor.name + '\n';
