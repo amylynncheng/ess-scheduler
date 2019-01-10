@@ -149,7 +149,7 @@ function fetchSurveyData() {
       if (tutor.timestamp === '') { // skip all empty rows.
         continue;
       }
-      tutor.name = basicInfo[row][1]; // B
+      tutor.name = (basicInfo[row][1]).trim(); // B
       tutor.email = basicInfo[row][2] // C
       tutor.major = basicInfo[row][3]; // D
       tutor.level = basicInfo[row][4]; // E
@@ -173,6 +173,14 @@ function fetchSurveyData() {
       tutor.givenHours = getGivenHours(tutor);
       // assigned hours are 0 before the schedule is written.
       tutor.assignedHours = 0;
+      
+      // remove all duplicate responses before adding the most up-to-date response.
+      tutors.forEach(function(exisitingTutor) {
+        if (exisitingTutor.name === tutor.name) {
+          var index = tutors.indexOf(exisitingTutor);
+          if (index !== -1) tutors.splice(index, 1);
+        }
+      });
       tutors.push(tutor);
     }
   }
